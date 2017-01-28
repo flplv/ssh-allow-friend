@@ -1,0 +1,130 @@
+#!/bin/bash
+
+print_help () {
+    echo ""
+}
+
+print_usage () {
+    echo "Usage example: $0 --github <user_name>"
+}
+
+#
+# Configuration vars
+GITHUB=0
+USERNAME=''
+USERKEY=''
+SERVICENAME=''
+LOCALIPADDRESS=''
+
+#
+# Test dependencies
+getopt --test > /dev/null
+if [[ $? -ne 4 ]]; then
+    echo "$0: I’m sorry, `getopt --test` failed in this environment."
+    exit 1
+fi
+
+curl --help > /dev/null
+if [[ $? -ne 0 ]]; then
+    echo "$0: I’m sorry, `curl --help` failed in this environment."
+    exit 1
+fi
+
+#
+# Parse arguments
+SHORT=g
+LONG=github
+
+# -temporarily store output to be able to check for errors
+# -activate advanced mode getopt quoting e.g. via “--options”
+# -pass arguments only via   -- "$@"   to separate them correctly
+PARSED=`getopt --options $SHORT --longoptions $LONG --name "$0" -- "$@"`
+if [[ $? -ne 0 ]]; then
+    # e.g. $? == 1
+    echo "$0: Invalid parameters."
+    print_usage
+    exit 2
+fi
+# use eval with "$PARSED" to properly handle the quoting
+eval set -- "$PARSED"
+
+# now enjoy the options in order and nicely split until we see --
+while true; do
+    case "$1" in
+        -g|--github)
+            GITHUB=1
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Programming error"
+            exit 3
+            ;;
+    esac
+done
+
+# handle non-option arguments
+if [[ $# -ne 1 ]]; then
+    echo "$0: A single user name is required."
+    print_usage
+    exit 4
+fi
+
+USERNAME=$1
+
+#
+# Get user key from server
+if [[ $GITHUB -eq 1 ]]; then
+    USERKEY=`curl -s https://github.com/$USERNAME.keys`
+    SERVICENAME='github'
+else
+    echo "$0: No service selected."
+    print_usage
+    exit 5
+fi
+
+if [[ $USERKEY != ssh-rsa* ]]; then
+    echo "$0: Unable to get user key, is the user name correct?"
+    exit 6
+fi
+
+#
+# Get local ip address
+LOCALIPADDRESS=`/sbin/ip -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}'`
+
+echo "Acquired key for user $USERNAME from $SERVICENAME,"
+echo "your friend is now able to login via ssh using:"
+echo "$LOCALIPADDRESS" | while read a; do echo "    ssh $USER@$a"; done
+echo ""
+echo "Login authorization will be ceased after this"
+echo "program terminates."
+echo "Press ^C to exit."
+
+setup () {
+    (
+        flock 200
+
+        mkdir -p $HOME/.ssh/
+        echo $USERKEY >> $HOME/.ssh/authorized_keys
+    ) 200>/tmp/.ssh-allow-friend.$USER.lock
+}
+
+teardown () {
+    (
+        flock 200
+
+        # remove key from file, or the entire file if empty
+        if grep -v "$USERKEY" $HOME/.ssh/authorized_keys > $HOME/.ssh/tmp; then
+            cat $HOME/.ssh/tmp > $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp;
+        else
+            rm $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp;
+        fi
+    ) 200>/tmp/.ssh-allow-friend.$USER.lock
+}
+
+trap "teardown; exit 0" SIGHUP SIGINT SIGTERM
+setup
+while [ 1 ]; do sleep 1; done
