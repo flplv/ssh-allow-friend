@@ -2,6 +2,26 @@
 
 print_help () {
     echo ""
+    echo "    Temporarily allow a ssh login using friends public key"
+    echo " fetched from online servers."
+    echo ""
+    echo "Usage:"
+    echo "    $0 [options] <friend_user_name>"
+    echo ""
+    echo "[options]"
+    echo "    -h | --help          Print this help;"
+    echo "    -g | --github        Select Github as public key server."
+    echo ""
+    echo "<friend_user_name>"
+    echo "    It is the username used to download keys from selected"
+    echo "    server."
+    echo ""
+    echo "Advanced example:"
+    echo ""
+    echo "    Allow user \`john-doe\` from Github to login as user"
+    echo "    \`myself\`:"
+    echo "      sudo -H -u myself $0 --github john-doe"
+    echo ""
 }
 
 print_usage () {
@@ -32,12 +52,9 @@ fi
 
 #
 # Parse arguments
-SHORT=g
-LONG=github
+SHORT=gh
+LONG=github,help
 
-# -temporarily store output to be able to check for errors
-# -activate advanced mode getopt quoting e.g. via “--options”
-# -pass arguments only via   -- "$@"   to separate them correctly
 PARSED=`getopt --options $SHORT --longoptions $LONG --name "$0" -- "$@"`
 if [[ $? -ne 0 ]]; then
     # e.g. $? == 1
@@ -45,12 +62,14 @@ if [[ $? -ne 0 ]]; then
     print_usage
     exit 2
 fi
-# use eval with "$PARSED" to properly handle the quoting
 eval set -- "$PARSED"
 
-# now enjoy the options in order and nicely split until we see --
 while true; do
     case "$1" in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
         -g|--github)
             GITHUB=1
             shift
@@ -66,7 +85,6 @@ while true; do
     esac
 done
 
-# handle non-option arguments
 if [[ $# -ne 1 ]]; then
     echo "$0: A single user name is required."
     print_usage
@@ -99,8 +117,8 @@ echo "Acquired key for user $USERNAME from $SERVICENAME,"
 echo "your friend is now able to login via ssh using:"
 echo "$LOCALIPADDRESS" | while read a; do echo "    ssh $USER@$a"; done
 echo ""
-echo "Login authorization will be ceased after this"
-echo "program terminates."
+echo "Login authorization will be ceased after this program"
+echo "terminates."
 echo "Press ^C to exit."
 
 setup () {
@@ -127,4 +145,4 @@ teardown () {
 
 trap "teardown; exit 0" SIGHUP SIGINT SIGTERM
 setup
-while [ 1 ]; do sleep 1; done
+sleep infinity
