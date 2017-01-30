@@ -178,4 +178,5 @@ teardown () {
 
 trap "teardown; exit 0" SIGHUP SIGINT SIGTERM
 setup
-sleep infinity
+sleep infinity &
+wait
