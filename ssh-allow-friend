@@ -56,6 +56,12 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+SSH_KEYGEN_CMD=$(which ssh-keygen 2> /dev/null)
+if [[ $? -ne 0 ]]; then
+    echo "$0: ssh-keygen command not available."
+    exit 1
+fi
+
 #
 # Parse arguments
 SHORT=gh
@@ -100,20 +106,41 @@ fi
 USERNAME=$1
 
 #
-# Get user key from server
-if [[ $GITHUB -eq 1 ]]; then
-    USERKEY=`curl -s https://github.com/$USERNAME.keys`
+# Get user keys from server
+github_download_key () {
     SERVICENAME='github'
+    USERKEY=`curl -s https://github.com/$USERNAME.keys`
+
+    if [[ -z $USERKEY ]]; then
+        echo "User $USERNAME has no keys in Github."
+        exit 5
+    fi
+
+    if [[ "$USERKEY" == "Not Found" ]]; then
+        echo "User $USERNAME not found in Github."
+        exit 5
+    fi
+}
+
+if [[ $GITHUB -eq 1 ]]; then
+    github_download_key
 else
     echo "$0: No service selected."
     print_usage
     exit 5
 fi
 
-if [[ $USERKEY != ssh-rsa* ]]; then
-    echo "$0: Unable to get user key, is the user name correct?"
+#
+# Check keys integrity
+TMP_KEY_FILE=/tmp/.ssh-allow-friend.$USERNAME-$USER-$SERVICENAME.keys
+echo $USERKEY > $TMP_KEY_FILE
+ssh-keygen -l -f $TMP_KEY_FILE > /dev/null
+if [[ $? -ne 0 ]]; then
+    echo "$0: Downloaded key is invalid."
     exit 6
 fi
+rm -f $TMP_KEY_FILE
+
 
 #
 # Get local ip address
