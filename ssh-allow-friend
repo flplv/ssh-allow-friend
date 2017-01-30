@@ -40,13 +40,19 @@ LOCALIPADDRESS=''
 # Test dependencies
 getopt --test > /dev/null
 if [[ $? -ne 4 ]]; then
-    echo "$0: I’m sorry, `getopt --test` failed in this environment."
+    echo "$0: `getopt --test` failed in this environment."
     exit 1
 fi
 
 curl --help > /dev/null
 if [[ $? -ne 0 ]]; then
-    echo "$0: I’m sorry, `curl --help` failed in this environment."
+    echo "$0: `curl --help` failed in this environment."
+    exit 1
+fi
+
+IP_CMD=$(which ip 2> /dev/null)
+if [[ $? -ne 0 ]]; then
+    echo "$0: ip command not available."
     exit 1
 fi
 
@@ -109,11 +115,6 @@ if [[ $USERKEY != ssh-rsa* ]]; then
     exit 6
 fi
 
-IP_CMD=$(which ip 2> /dev/null)
-if [[ $? -ne 0 ]]; then
-    echo "ip command not available."
-    exit 7
-fi
 #
 # Get local ip address
 LOCALIPADDRESS=$($IP_CMD -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}')
