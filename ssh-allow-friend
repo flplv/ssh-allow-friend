@@ -109,9 +109,14 @@ if [[ $USERKEY != ssh-rsa* ]]; then
     exit 6
 fi
 
+IP_CMD=$(which ip 2> /dev/null)
+if [[ $? -ne 0 ]]; then
+    echo "ip command not available."
+    exit 7
+fi
 #
 # Get local ip address
-LOCALIPADDRESS=`/sbin/ip -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}'`
+LOCALIPADDRESS=$($IP_CMD -o addr show scope global | awk '{gsub(/\/.*/,"",$4); print $4}')
 
 echo "Acquired key for user $USERNAME from $SERVICENAME,"
 echo "your friend is now able to login via ssh using:"
