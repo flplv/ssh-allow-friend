@@ -1,4 +1,4 @@
-ssh-allow-friend
+**ssh-allow-friend**
 
 This is a bash script to temporarily allow a ssh login using friends public key
 automatically fetched from online servers.
