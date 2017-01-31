@@ -40,13 +40,13 @@ LOCALIPADDRESS=''
 # Test dependencies
 getopt --test > /dev/null
 if [[ $? -ne 4 ]]; then
-    echo "$0: `getopt --test` failed in this environment."
+    echo "$0: \`getopt --test\` failed in this environment."
     exit 1
 fi
 
 curl --help > /dev/null
 if [[ $? -ne 0 ]]; then
-    echo "$0: `curl --help` failed in this environment."
+    echo "$0: \`curl --help\` failed in this environment."
     exit 1
 fi
 
