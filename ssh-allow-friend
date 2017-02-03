@@ -159,8 +159,7 @@ setup () {
         flock 200
 
         mkdir -p $HOME/.ssh/
-        echo $USERKEY >> $HOME/.ssh/authorized_keys
-        sed -i 's/ ssh/\nssh/g' $HOME/.ssh/authorized_keys
+        echo "$USERKEY" >> $HOME/.ssh/authorized_keys
     ) 200>/tmp/.ssh-allow-friend.$USER.lock
 }
 
